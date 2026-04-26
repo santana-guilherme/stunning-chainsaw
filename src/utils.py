@@ -80,7 +80,7 @@ def extract_title(markdown: str):
     return splited[1].split("\n")[0].strip()
 
 
-def generate_page(from_path: str, template_path: str, dest_path: str):
+def generate_page(from_path: str, template_path: str, dest_path: str, base_path: str):
     logger.info(
         f"Generating page from {from_path} to {dest_path} using {template_path}"
     )
@@ -97,6 +97,11 @@ def generate_page(from_path: str, template_path: str, dest_path: str):
     template = template.replace("{{ Title }}", extracted_title).replace(
         "{{ Content }}", html_str
     )
+    # update basepath
+    if base_path != "/":
+        template = template.replace('href="/', f'href="{base_path}').replace(
+            'src="/', f'src="{base_path}'
+        )
 
     dest_path_folders = dest_path.rsplit("/", maxsplit=1)[0]
     if not os.path.exists(dest_path_folders):
@@ -106,7 +111,9 @@ def generate_page(from_path: str, template_path: str, dest_path: str):
         f.write(template)
 
 
-def generate_pages_recursive(dir_path_content, template_path, dest_dir_path):
+def generate_pages_recursive(
+    dir_path_content: str, template_path: str, dest_dir_path: str, base_path: str
+):
     for el in os.listdir(dir_path_content):
         current_el_path = os.path.join(dir_path_content, el)
         dest_el_path = os.path.join(dest_dir_path, el)
@@ -117,10 +124,12 @@ def generate_pages_recursive(dir_path_content, template_path, dest_dir_path):
                     from_path=current_el_path,
                     dest_path=dest_el_path,
                     template_path=template_path,
+                    base_path=base_path,
                 )
         else:
             generate_pages_recursive(
                 dir_path_content=current_el_path,
                 template_path=template_path,
                 dest_dir_path=dest_el_path,
+                base_path=base_path,
             )
