@@ -6,7 +6,7 @@ from src.models.textnode import TextNode, TextType
 
 
 def split_nodes_delimiter(
-    old_nodes: List[TextNode], delimiter: str, text_type: TextType
+    old_nodes: List[TextNode], delimiter: str, text_type: TextType, regex: bool = False
 ):
     new_nodes = []
     for node in old_nodes:
@@ -14,7 +14,11 @@ def split_nodes_delimiter(
             new_nodes.append(node)
             continue
 
-        text_parts = node.text.split(delimiter)
+        if regex:
+            text_parts = re.split(delimiter, node.text)
+        else:
+            text_parts = node.text.split(delimiter)
+
         for idx, part in enumerate(text_parts, start=1):
             part = part.replace("\n", " ").replace("  ", " ")
             if part.strip() == "":
@@ -24,6 +28,7 @@ def split_nodes_delimiter(
             if idx % 2 != 0:
                 new_nodes.append(new_node)
                 continue
+            new_node.text = new_node.text
             new_node.text_type = text_type
             new_nodes.append(new_node)
     return new_nodes
@@ -122,41 +127,21 @@ def text_to_textnodes(text: str) -> List[TextNode]:
         text_type=TextType.ITALIC,
     )
     # transforma LIST ITEM
-    nodes = split_nodes_delimiter(
-        old_nodes=nodes,
-        delimiter="-",
-        text_type=TextType.LIST_ITEM,
-    )
+    # nodes = split_nodes_delimiter(
+    #     old_nodes=nodes,
+    #     delimiter="-",
+    #     text_type=TextType.LIST_ITEM,
+    # )
     # transforma CODE
     nodes = split_nodes_delimiter(
         old_nodes=nodes,
         delimiter="`",
         text_type=TextType.CODE,
     )
-    # transforma CODE
-    nodes = split_nodes_delimiter(
-        old_nodes=nodes,
-        delimiter="`",
-        text_type=TextType.CODE,
-    )
-    # transforma CODE
-    nodes = split_nodes_delimiter(
-        old_nodes=nodes,
-        delimiter="`",
-        text_type=TextType.CODE,
-    )
-    # transforma CODE
-    nodes = split_nodes_delimiter(
-        old_nodes=nodes,
-        delimiter="`",
-        text_type=TextType.CODE,
-    )
-    # transforma CODE
-    nodes = split_nodes_delimiter(
-        old_nodes=nodes,
-        delimiter="`",
-        text_type=TextType.CODE,
-    )
+    # transforma QUOTE
+    # nodes = split_nodes_delimiter(
+    #     old_nodes=nodes, delimiter="> \w+\s", text_type=TextType.QUOTE, regex=True
+    # )
     # transforma LINK
     nodes = split_nodes_link(old_nodes=nodes)
     # transforma IMAGE
@@ -185,7 +170,11 @@ def text_node_to_html_node(text_node: TextNode):
             )
         case TextType.IMAGE:
             return LeafNode(
-                tag="img", value="", props={"src": text_node.url, "alt": text_node.text}
+                tag="img",
+                value="",
+                props={"src": text_node.url, "alt": text_node.text},
             )
+        case TextType.QUOTE:
+            return LeafNode(tag="blockquote", value=text_node.text)
         case _:
             raise Exception("We don't know what to do")

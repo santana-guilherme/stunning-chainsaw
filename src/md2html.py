@@ -1,13 +1,14 @@
+import re
 from typing import List
 
 from src.block_parser import BlockType, block_to_type, markdown_to_blocks
-from src.models.htmlnode import HTMLNode, ParentNode
 from src.inline_parser import (
     TextNode,
     TextType,
     text_node_to_html_node,
     text_to_textnodes,
 )
+from src.models.htmlnode import HTMLNode, LeafNode, ParentNode
 
 
 def markdown_to_html_node(markdown: str):
@@ -17,13 +18,25 @@ def markdown_to_html_node(markdown: str):
     for block in blocks:
         block_type = block_to_type(block)
         if block_type == BlockType.UNORDERED_LIST:
-            parent_most_node.children.append(
-                ParentNode(tag="ul", children=text_to_children(block))
-            )
+            children = [
+                child.strip() for child in block.split("- ") if child.strip() != ""
+            ]
+            children = [
+                ParentNode(tag="li", children=text_to_children(child))
+                for child in children
+            ]
+            parent_most_node.children.append(ParentNode(tag="ul", children=children))
         elif block_type == BlockType.ORDERED_LIST:
-            parent_most_node.children.append(
-                ParentNode(tag="ol", children=text_to_children(block))
-            )
+            children = [
+                child.strip()
+                for child in re.split(r"\d. ", block)
+                if child.strip() != ""
+            ]
+            children = [
+                ParentNode(tag="li", children=text_to_children(child))
+                for child in children
+            ]
+            parent_most_node.children.append(ParentNode(tag="ol", children=children))
         elif block_type == BlockType.PARAGRAPH:
             parent_most_node.children.append(
                 ParentNode(tag="p", children=text_to_children(block))
@@ -35,6 +48,23 @@ def markdown_to_html_node(markdown: str):
             node = text_node_to_html_node(node)
             parent = ParentNode(tag="pre", children=[node])
             parent_most_node.children.append(parent)
+        elif block_type == BlockType.HEADING:
+            title_size = block.count("#")
+            parent_most_node.children.append(
+                ParentNode(
+                    tag=f"h{title_size}",
+                    children=text_to_children(block.lstrip("#").strip()),
+                )
+            )
+        elif block_type == BlockType.QUOTE:
+            children = [
+                child.strip() for child in block.split(">") if child.strip() != ""
+            ]
+            parent_most_node.children.append(
+                ParentNode(
+                    tag="blockquote", children=text_to_children("\n".join(children))
+                )
+            )
         else:
             parent_most_node.children.extend(text_to_children(block))
     return parent_most_node

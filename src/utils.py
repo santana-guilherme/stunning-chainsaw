@@ -3,6 +3,8 @@ import os
 import shutil
 from pathlib import Path
 
+from src.md2html import markdown_to_html_node
+
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 logger.setLevel(logging.INFO)
@@ -21,9 +23,8 @@ def copy_content(src: str, dest: str):
         shutil.rmtree(dest)
     os.mkdir(dest)
     # copy all content
-    # abs_src = str(pathlib.Path(src).resolve())
-    # abs_dest = str(pathlib.Path(dest).resolve())
     _recursive_copy(src, dest)
+
 
 def _get_destination_path(src: str, dest: str):
     """
@@ -33,7 +34,7 @@ def _get_destination_path(src: str, dest: str):
         dest: folder3
         produces: folder3/folder2
     """
-    origin = src.split('/', maxsplit=1)[-1] if len(src.split('/')) > 1 else ""
+    origin = src.split("/", maxsplit=1)[-1] if len(src.split("/")) > 1 else ""
     return os.path.join(Path(dest).resolve(), origin)
 
 
@@ -45,7 +46,9 @@ def _recursive_copy(current_path: str, dest: str):
             # if the path to the files doesn't exists create it
             destination_path = _get_destination_path(current_path, dest)
             if not os.path.exists(destination_path):
-                logger.info(f"creating destination path: {destination_path} from current path {current_path}")
+                logger.info(
+                    f"creating destination path: {destination_path} from current path {current_path}"
+                )
                 os.mkdir(destination_path)
             logger.info(
                 f"Copying {os.path.join(current_path, el)} to {destination_path}"
@@ -59,7 +62,65 @@ def _recursive_copy(current_path: str, dest: str):
             logger.info(f"recursive call on {next_current_path}")
 
             destination_path = _get_destination_path(next_current_path, dest)
-            logger.info(f"use the opportunity to create the directory on the destination: {destination_path}")
+            logger.info(
+                f"use the opportunity to create the directory on the destination: {destination_path}"
+            )
             os.mkdir(destination_path)
             # downside is that if we have a bunch of folders without a file we will create them for nothing
             _recursive_copy(next_current_path, dest)
+
+
+def extract_title(markdown: str):
+    splited = markdown.split("# ", maxsplit=2)
+    if len(splited) < 2:
+        raise Exception("No header on the text")
+
+    # the title ends when we see a line break
+    # we strip just for the sake of it
+    return splited[1].split("\n")[0].strip()
+
+
+def generate_page(from_path: str, template_path: str, dest_path: str):
+    logger.info(
+        f"Generating page from {from_path} to {dest_path} using {template_path}"
+    )
+
+    with open(from_path, "r") as f:
+        markdown = f.read()
+
+    with open(template_path, "r") as f:
+        template = f.read()
+
+    html_str = markdown_to_html_node(markdown).to_html()
+    extracted_title = extract_title(markdown)
+
+    template = template.replace("{{ Title }}", extracted_title).replace(
+        "{{ Content }}", html_str
+    )
+
+    dest_path_folders = dest_path.rsplit("/", maxsplit=1)[0]
+    if not os.path.exists(dest_path_folders):
+        os.makedirs(dest_path_folders)
+
+    with open(os.path.join(dest_path), "w+") as f:
+        f.write(template)
+
+
+def generate_pages_recursive(dir_path_content, template_path, dest_dir_path):
+    for el in os.listdir(dir_path_content):
+        current_el_path = os.path.join(dir_path_content, el)
+        dest_el_path = os.path.join(dest_dir_path, el)
+        if os.path.isfile(current_el_path):
+            if el.endswith(".md"):
+                dest_el_path = dest_el_path.replace(".md", ".html")
+                generate_page(
+                    from_path=current_el_path,
+                    dest_path=dest_el_path,
+                    template_path=template_path,
+                )
+        else:
+            generate_pages_recursive(
+                dir_path_content=current_el_path,
+                template_path=template_path,
+                dest_dir_path=dest_el_path,
+            )

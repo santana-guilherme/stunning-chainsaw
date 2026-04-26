@@ -2,6 +2,7 @@ import re
 from enum import Enum
 from typing import List
 
+
 class BlockType(Enum):
     PARAGRAPH = "paragraph"
     HEADING = "heading"
@@ -17,15 +18,15 @@ def block_to_type(block: str) -> BlockType:
         block_type = BlockType.HEADING
     elif block.startswith("```\n") and block.endswith("```"):
         block_type = BlockType.CODE
-    elif re.search(r"^> ?\w+", block):
+    elif re.search(r"^> ?.", block):
         block_type = BlockType.QUOTE
     elif block.startswith("- "):
         block_type = BlockType.UNORDERED_LIST
-    elif re.search("^\d\. ", block):
+    elif re.search(r"^\d\. ", block):
         block_type = BlockType.ORDERED_LIST
 
     return block_type
 
 
 def markdown_to_blocks(markdown: str) -> List[str]:
-    return [ block.strip() for block in markdown.split("\n\n") if block.strip() != ""]
+    return [block.strip() for block in markdown.split("\n\n") if block.strip() != ""]

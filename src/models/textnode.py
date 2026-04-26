@@ -9,6 +9,8 @@ class TextType(Enum):
     IMAGE = "image"
     TEXT = "text"
     LIST_ITEM = "list_item"
+    HEADING = "heading"
+    QUOTE = "quote"
 
 
 class TextNode:

@@ -45,7 +45,10 @@ class TestInlineParser(unittest.TestCase):
                         TextType.TEXT,
                     )
                 ],
-                [TextNode(" A list item", TextType.LIST_ITEM)],
+                [
+                    TextNode(" A list item", TextType.LIST_ITEM),
+                    # TextNode(" Another item", TextType.LIST_ITEM),
+                ],
             ),
             (
                 ("`", TextType.CODE),
@@ -59,6 +62,16 @@ code block
                     )
                 ],
                 [TextNode(" code block ", TextType.CODE)],
+            ),
+            (
+                (r"^\d\. ", TextType.LIST_ITEM, True),
+                [
+                    TextNode(
+                        """1. this is a ordered list item""",
+                        TextType.TEXT,
+                    )
+                ],
+                [TextNode("this is a ordered list item", TextType.LIST_ITEM)],
             ),
         ]
         for args, nodes, expected in cases:
